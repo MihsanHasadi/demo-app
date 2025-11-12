@@ -1,55 +1,25 @@
-name: Deploy Demo App
-
-# <-- Trigger workflow -->
-on:
-  push:
-    branches:
-      - main       # jalankan saat push ke main
-  workflow_dispatch: # opsional, bisa dijalankan manual
-
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-
+    runs-on: self-hosted   # gunakan self-hosted runner
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Log in to Docker Hub
+      - uses: actions/checkout@v3
+      - name: Docker login
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build Docker image
+      - name: Build & Push Docker image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/demo-app:latest .
-
-      - name: Push Docker image
-        run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/demo-app:latest
-
-      - name: Setup kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
       - name: Deploy to K3s
         run: |
-          # Cek deployment, buat kalau belum ada
           if ! kubectl get deployment demo-app; then
             kubectl create deployment demo-app --image=${{ secrets.DOCKER_USERNAME }}/demo-app:latest
           fi
-
-          # Update image deployment
           kubectl set image deployment/demo-app demo-app=${{ secrets.DOCKER_USERNAME }}/demo-app:latest
-
-          # Cek service, buat kalau belum ada
           if ! kubectl get svc demo-app; then
             kubectl expose deployment demo-app --type=NodePort --port=8080
           fi
-
-          # Tampilkan status
           kubectl get pods
           kubectl get svc
