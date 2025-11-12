@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted  # wajib self-hosted runner
+    runs-on:  ubuntu-latest
 
     steps:
       # 1️⃣ Checkout repository
